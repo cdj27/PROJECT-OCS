@@ -1,4 +1,4 @@
-# Parking Analysis v2.4
+# Parking Analysis v2.5
 
 For hosting and external apps, see [HOSTING.md](HOSTING.md). The separate hosted entry point exposes authenticated `POST /v1/analyze`; the desktop app keeps its local two-step API. Docker configuration and a private model packager are included; no public deployment is implied by uploading the code to GitHub.
 
@@ -12,6 +12,26 @@ python start_app.py
 
 
 
+
+## Small vehicles and arrow-marked drive aisles (v2.5)
+
+Balanced and Thorough modes now recheck predicted empty bays without matched vehicles using closer YOLO11m context crops. Nearby bays share crops to reduce calls. Positive vehicle detections override an empty prediction; detections cut by an artificial crop boundary are discarded to avoid assigning part of a neighbouring car to an empty bay. A vehicle need not fill the bay: matching uses its intersection relative to the smaller of the vehicle and bay areas. The same checks apply to supported vehicle categories, including motorcycles and trucks.
+
+Automatic layouts also use solid road-arrow shape evidence, including some disconnected arrowheads with visible shafts. A bounded corridor along a detected arrow can reject proposed bays in a drive aisle. Transverse painted boundaries stop corridor extension; detected vehicle panels are excluded from arrow evidence. Manually supplied layouts retain their boundaries. Rejected candidates, their polygons and reasons are retained in JSON under `diagnostic.drive_aisle_checks`, and crop counts under `diagnostic.small_vehicle_context_checks`.
+
+This is an inference change, with the existing trained weights retained. It does not identify every driveway: faded paint, unusual arrows, perspective and partly hidden symbols remain limitations. Arrow recognition currently targets bright white and yellow markings; the broader bay-boundary colour support described below is unchanged. Extra crop inference increases CPU time.
+
+A local case study using the [Menlo Park aerial parking photo](https://www.menlopark.gov/News-articles/Transportation-news/20220314-Bay-Area-parking-census-released-ahead-of-parking-data-workshop) removed three visually reviewed false bays along a marked traffic lane while retaining all 42 occupied predictions. Other false lane proposals remain in that photo. This is a partial correction, not a new accuracy percentage. The reference photographs and before/after outputs remain local under `outputs/bay-errors/` and are excluded from GitHub. Small-vehicle close-view recovery and crop-edge safeguards have regression tests in `tests/test_bay_errors.py`.
+
+The v2.5 full-application regression on 15 PKLot photos / 1,500 labelled bays remains 1,493 correct (99.53%), with zero false-available errors and seven false-occupied errors. This is unchanged from v2.4. There are 206 unmatched predictions requiring separate boundary review; the labelled-bay score does not establish their precision. The photo-bootstrap interval is 98.8%-100%, so the strict 99% confidence gate still fails. These photos contain no detected arrow evidence and therefore do not validate the new aisle filter. Detailed results are local at `outputs/bay-errors/test-release.json`. Public compact-car case studies did not establish a measured occupancy improvement; the added crop checks are safeguards, not a claim of newly trained or universally improved weights.
+
+Inspect your own images without exposing an API:
+
+```powershell
+python -m tools.inspect_parking_cases --output outputs/my-cases "C:\photos\parking.jpg"
+```
+
+Restart the desktop app using **START_PARKING.cmd** to load v2.5, then upload a new photo and analyse it. Existing saved results remain snapshots of their original analysis.
 
 ## Marking-colour robustness (v2.4)
 

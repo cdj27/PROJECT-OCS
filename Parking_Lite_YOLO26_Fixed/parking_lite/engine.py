@@ -12,6 +12,8 @@ from .lines import discover_spaces
 from .slots import discover_parking,match_occupancy,box_iou
 from .corners import discover_corner_spaces,fuse_corner_boundaries
 from .orientation import divider_tilt,centre_tilt,rotate_canvas,restore_layout
+from .verification import verification_crops,restore_crop_vehicle
+from .aisles import exclude_aisle_bays
 
 
 class ParkingEngine:
@@ -33,7 +35,7 @@ class ParkingEngine:
                                   'installed':(self.root/'models'/'yolo11m.pt').exists()},
                 'occupancy':{'name':self.occupancy_checkpoint.name,'path':str(self.occupancy_checkpoint),
                              'installed':self.occupancy_checkpoint.exists()},
-                'vehicle_backend':self.vehicle_backend,'runtime':'CPU','version':'2.4',
+                'vehicle_backend':self.vehicle_backend,'runtime':'CPU','version':'2.5',
                 'neighbour_overlap_confirmation':self.verify_boundary_overlap,
                 'decision_policy':'binary' if self.binary_output else 'abstaining'}
 
@@ -216,8 +218,26 @@ class ParkingEngine:
                 assignments=self.vehicle_evidence(vehicles,parking_layout['spaces'],w,h)
                 parking_layout,recovered=recover_vehicle_bays(image,parking_layout,vehicles,assignments)
                 for sid in recovered:occupancy[sid]=parking_layout['occupancy_predictions'][sid]
-            verified=0;corner_crop_checks=0;classifier_checks=0
+            aisle_checks={'arrows':[],'excluded':[]}
+            if layout is None:
+                parking_layout,aisle_checks=exclude_aisle_bays(image,parking_layout,vehicles)
+            verified=0;corner_crop_checks=0;classifier_checks=0;context_checks=0
             preliminary=self.vehicle_evidence(vehicles,parking_layout['spaces'],w,h)
+            if supplemental:
+                for bounds,members in verification_crops(parking_layout['spaces'],occupancy,preliminary,w,h):
+                    left,top,right,bottom=bounds
+                    found=detect_diagnostic(self.load('small_vehicles'),image[top:bottom,left:right],
+                        conf=.35,imgsz=640,retry=False)['vehicles']
+                    context_checks+=1
+                    for vehicle in found:
+                        restored=restore_crop_vehicle(vehicle,bounds,w,h)
+                        if restored is None:continue
+                        # Only a vehicle assigned to a nominated empty bay may
+                        # add evidence; neighbouring traffic is not a bay.
+                        hits=self.vehicle_evidence([restored],parking_layout['spaces'],w,h)
+                        if any(hits[sid] for sid in members):vehicles.append(restored)
+                vehicles=deduplicate_vehicles(vehicles)
+                preliminary=self.vehicle_evidence(vehicles,parking_layout['spaces'],w,h)
             if self.model_info()['occupancy']['installed']:
                 for space in parking_layout['spaces']:
                     if space.get('boundary_source')!='corner_brackets' or preliminary[space['id']]:continue
@@ -234,7 +254,7 @@ class ParkingEngine:
                     is_corner=space.get('boundary_source')=='corner_brackets'
                     status=occupancy.get(space['id'],{}).get('status','unknown')
                     needs_model=is_corner and status=='unknown' and not preliminary[space['id']]
-                    needs_vehicle=(quality=='accurate' and status=='available') or (is_corner and status!='occupied' and not preliminary[space['id']])
+                    needs_vehicle=(quality=='accurate' and status=='available' and not preliminary[space['id']]) or (is_corner and status!='occupied' and not preliminary[space['id']])
                     if not needs_model and not needs_vehicle:continue
                     points=_polygon_px(space['points'],w,h)
                     x,y,bw,bh=cv2.boundingRect(points);pad=max(8,int(max(bw,bh)*.12))
@@ -253,7 +273,8 @@ class ParkingEngine:
                     found=detect_diagnostic(detector,crop,conf=.25,imgsz=size,retry=False)['vehicles']
                     verified+=1
                     for vehicle in found:
-                        a,b,c,d=vehicle['box'];vehicle['box']=[a+left,b+top,c+left,d+top]
+                        vehicle=restore_crop_vehicle(vehicle,(left,top,right,bottom),w,h)
+                        if vehicle is None:continue
                         if not any(box_iou(vehicle['box'],old['box'])>.5 for old in vehicles):vehicles.append(vehicle)
             assignments=self.vehicle_evidence(vehicles,parking_layout['spaces'],w,h)
             # Core rendering/counts are shared; occupancy decisions use the
@@ -329,6 +350,7 @@ class ParkingEngine:
             report['diagnostic']={'models':self.model_info(),'quality':quality,'engine':engine,
                 'vehicle_attempts':diagnostic['attempts'],'parking':learned.get('diagnostics',{}),
                 'verified_empty_candidates':verified,'vehicle_count':len(vehicles),
+                'small_vehicle_context_checks':context_checks,'drive_aisle_checks':aisle_checks,
                 'supplemental_small_vehicle_detector':supplemental,
                 'recovered_vehicle_bays':recovered,
                 'corner_crop_checks':corner_crop_checks,
