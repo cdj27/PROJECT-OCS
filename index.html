@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LOTWATCH: Live parking availability for SAFTI MI</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap">
+<style>
+:root{--bg:#050B18;--panel:#0A1630;--grid:#12294F;--cy:#22D3EE;--bl:#3B82F6;--free:#34D399;--full:#FB7185;--res:#60A5FA;--tx:#E6F0FF;--mu:#8FA6C8;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;color:var(--tx);font:400 17px/1.5 "Space Grotesk",system-ui,sans-serif;
+background:radial-gradient(800px 500px at 85% 0,rgba(34,211,238,.16),transparent 70%),radial-gradient(700px 500px at 0 100%,rgba(59,130,246,.18),transparent 70%),
+linear-gradient(var(--grid) 1px,transparent 1px) 0 0/44px 44px,linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/44px 44px,var(--bg);background-attachment:fixed}
+h1,h2,h3{font-family:"Chakra Petch","Arial Narrow",sans-serif;margin:0;line-height:1}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+.top{display:flex;justify-content:space-between;align-items:center;padding:22px 0 0;font:600 15px "Chakra Petch";color:var(--cy)}
+.live{display:inline-flex;align-items:center;gap:8px}
+.live i{width:10px;height:10px;border-radius:50%;background:var(--free);box-shadow:0 0 10px var(--free);animation:p 1.6s infinite}
+@keyframes p{50%{opacity:.35}}
+h1{font-size:clamp(56px,14vw,150px);font-weight:700;line-height:.92;margin-top:26px;letter-spacing:.02em;background:linear-gradient(180deg,#fff 20%,var(--cy));-webkit-background-clip:text;background-clip:text;color:transparent}
+.tag{font:600 clamp(24px,4.5vw,40px)/1.1 "Chakra Petch";margin:14px 0 0;max-width:16em}
+.sub{color:var(--mu);max-width:38em;margin:12px 0 0}
+section{padding:34px 0}
+h2{font-size:clamp(30px,6vw,46px);font-weight:700;margin-bottom:12px}
+.lede{color:var(--mu);max-width:42em;margin:0 0 18px}
+.hud{border:2px solid var(--cy);background:rgba(10,22,48,.88);padding:16px;position:relative;box-shadow:0 0 36px rgba(34,211,238,.2),inset 0 0 36px rgba(34,211,238,.05)}
+.hud::before,.hud::after{content:"";position:absolute;width:26px;height:26px;border:4px solid var(--cy)}
+.hud::before{top:-4px;left:-4px;border-right:0;border-bottom:0}
+.hud::after{bottom:-4px;right:-4px;border-left:0;border-top:0}
+.bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.seg{display:inline-flex;border:2px solid var(--cy)}
+button{font:inherit;cursor:pointer;color:var(--tx)}
+.seg button{background:transparent;border:0;padding:10px 16px;font:600 16px "Chakra Petch";min-height:44px}
+.seg button[aria-pressed=true]{background:var(--cy);color:#041018}
+.counts{display:flex;gap:16px;flex-wrap:wrap;font:600 17px "Chakra Petch"}
+.counts>span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:14px;height:14px;border-radius:3px;display:inline-block}
+.zones{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.zone{background:#0D1D3D;border:2px solid #1B3A6B;padding:10px}
+.zone h3{font-size:22px;margin:0 0 8px;display:flex;justify-content:space-between;align-items:baseline}
+.zone h3 small{font:600 14px "Chakra Petch";color:var(--free)}
+.bays{display:grid;grid-template-columns:repeat(6,1fr);border-top:2px solid var(--mu);border-bottom:2px solid var(--mu)}
+.bay{aspect-ratio:3/5;border:0;border-left:2px solid var(--mu);background:transparent;color:#041018;font:700 11px "Space Grotesk";display:flex;align-items:center;justify-content:center;position:relative;padding:0;transition:background .25s}
+.bay:nth-child(6n){border-right:2px solid var(--mu)}
+.bay[data-s=free]{background:var(--free)}
+.bay[data-s=full]{background:var(--full)}
+.bay[data-s=res]{background:var(--res)}
+.bay[data-s=closed]{background:repeating-linear-gradient(45deg,#26354B 0 6px,#1B283A 6px 12px)}
+.bay[aria-pressed=true]{outline:3px solid #fff;outline-offset:-3px;z-index:1;box-shadow:0 0 14px var(--cy)}
+.bay.flag::after{content:"!";position:absolute;top:1px;right:3px;color:#041018;font-size:12px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+@media(max-width:700px){.row2{grid-template-columns:1fr}}
+.panel{border:2px dashed #1B3A6B;padding:12px 14px;min-height:112px}
+.panel b{font:700 22px "Chakra Petch"}
+.panel .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.panel .acts button{border:2px solid var(--cy);background:transparent;padding:8px 12px;font:600 15px "Chakra Petch";min-height:44px}
+.rec{border:2px solid var(--cy);background:rgba(34,211,238,.1);padding:12px 14px;font:600 20px/1.2 "Chakra Petch";display:flex;flex-direction:column;justify-content:center}
+.rec small{font:400 15px/1.4 "Space Grotesk";display:block;margin-top:6px;color:var(--mu)}
+.note{font-size:13px;color:var(--mu);margin:10px 0 0}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.card{border:2px solid var(--grid);border-top:4px solid var(--cy);background:rgba(10,22,48,.9);padding:16px}
+.card:nth-child(2){border-top-color:var(--bl)}.card:nth-child(3){border-top-color:var(--free)}
+.card h3{font-size:26px;margin-bottom:6px}
+.card p{margin:0;color:var(--mu)}
+.card .n{font:700 40px "Chakra Petch";color:var(--cy);margin-bottom:6px}
+details{background:rgba(10,22,48,.9);border:2px solid var(--grid);padding:12px 16px;margin-bottom:10px}
+summary{font:600 18px "Chakra Petch";cursor:pointer;min-height:24px}
+details p{margin:8px 0 0;color:var(--mu)}
+.ask{border:2px solid var(--cy);background:rgba(10,22,48,.92);padding:26px 22px;box-shadow:0 0 36px rgba(34,211,238,.2)}
+.ask h2{color:var(--cy)}
+.ask .big{font:600 clamp(22px,4vw,32px)/1.15 "Chakra Petch";max-width:26em;margin:0}
+.ask ul{margin:14px 0 0;padding-left:20px;color:var(--mu)}
+.ask li{margin:6px 0}
+footer{padding:20px 0 40px;color:var(--mu);font-size:14px}
+button:focus-visible,summary:focus-visible{outline:3px solid #fff;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}.live i{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><span>SAFTI MI / INNOVATION DAY</span><span class="live"><i></i>LIVE LOT STATUS</span></div>
+  <header>
+    <h1>LOTWATCH</h1>
+    <p class="tag">Know where to park before you arrive.</p>
+    <p class="sub">A live map of every lot in SAFTI MI, powered by AI cameras and shown on any phone or computer browser.</p>
+  </header>
+</div>
+
+<section class="wrap" aria-labelledby="demo-h">
+  <h2 id="demo-h">Try it: Family Day, before and after</h2>
+  <p class="lede">Switch between a normal day and a Family Day surge. Tap any bay to see its wing, report a wrong status, or reserve it for guests.</p>
+  <div class="hud">
+    <div class="bar">
+      <div class="seg" role="group" aria-label="Scenario">
+        <button id="m-normal" aria-pressed="true">Normal day</button>
+        <button id="m-surge" aria-pressed="false">Family Day surge</button>
+      </div>
+      <div class="counts" aria-live="polite">
+        <span><i class="dot" style="background:var(--free)"></i><span id="c-free">0</span> free</span>
+        <span><i class="dot" style="background:var(--full)"></i><span id="c-full">0</span> full</span>
+        <span><i class="dot" style="background:var(--res)"></i><span id="c-res">0</span> reserved</span>
+      </div>
+    </div>
+    <div class="zones" id="zones"></div>
+    <div class="row2">
+      <div class="panel" id="panel" aria-live="polite"></div>
+      <div class="rec" id="rec"></div>
+    </div>
+    <p class="note">Demo uses sample data and placeholder wing names. The live version reads real camera feeds.</p>
+  </div>
+</section>
+
+<section class="wrap" aria-labelledby="prob-h">
+  <h2 id="prob-h">The problem: nobody knows where to park until they get there</h2>
+  <div class="grid3">
+    <div class="card" style="border-top-color:var(--full)"><h3>Gate queues</h3><p>On Family Day, vehicles back up at the gate, slow vehicle checks and make it harder for security to keep control.</p></div>
+    <div class="card" style="border-top-color:var(--full)"><h3>Cars circling inside</h3><p>Drivers hunting for space block internal roads and raise the risk of vehicle conflicts and pedestrian hazards.</p></div>
+    <div class="card" style="border-top-color:var(--full)"><h3>Marshals reacting late</h3><p>Radio calls and manual updates are slow, so marshals are always one step behind the congestion.</p></div>
+  </div>
+</section>
+
+<section class="wrap" aria-labelledby="how-h">
+  <h2 id="how-h">How it works</h2>
+  <div class="grid3">
+    <div class="card"><div class="n">1</div><h3>Cameras watch the lots</h3><p>Affordable off-the-shelf cameras (Tapo C310) look over each car park from an elevated angle.</p></div>
+    <div class="card"><div class="n">2</div><h3>AI reads every bay</h3><p>Computer vision marks each bay as occupied or empty and sends the result to the app.</p></div>
+    <div class="card"><div class="n">3</div><h3>Everyone sees it live</h3><p>Officers, marshals and organisers open the map in a browser and direct vehicles where there is space.</p></div>
+  </div>
+</section>
+
+<section class="wrap" aria-labelledby="feat-h">
+  <h2 id="feat-h">What you get</h2>
+  <div class="grid3">
+    <div class="card"><h3>One map, every lot</h3><p>The full SAFTI MI layout with each lot clearly marked available, full or reserved. No training needed.</p></div>
+    <div class="card"><h3>Wing contacts in one tap</h3><p>Each lot shows its wing and who to call, so no one chases people by phone or message.</p></div>
+    <div class="card"><h3>Reserve lots for guests</h3><p>Authorised personnel book lots in advance for events, replacing physical signs and preventing double bookings.</p></div>
+  </div>
+  <p class="lede" style="margin-top:16px">Nothing to install and no special equipment for users. If the AI gets a bay wrong, anyone can report it, and last-updated timestamps show when data is stale.</p>
+</section>
+
+<section class="wrap" aria-labelledby="risk-h">
+  <h2 id="risk-h">Risks we have planned for</h2>
+  <details><summary>The AI misreads a bay</summary><p>We train on diverse parking images, test against real footage, allow manual correction, and let users report a wrong status.</p></details>
+  <details><summary>A camera view is blocked</summary><p>Cameras go on elevated mounts with coverage checked during installation.</p></details>
+  <details><summary>Poor light or weather</summary><p>We test in different conditions and use outdoor cameras with night vision.</p></details>
+  <details><summary>Wi-Fi drops</summary><p>We secure reliable coverage, monitor camera connectivity, and show last-updated timestamps whenever live data is unavailable.</p></details>
+</section>
+
+<footer class="wrap">LOTWATCH: Live Parking Lot Availability Tracker. Built with Python, Flask, MySQL, React and Next.js.</footer>
+
+<script>
+(function(){
+var ZONES=[{n:"Zone A",w:"Wing A"},{n:"Zone B",w:"Wing B"},{n:"Zone C",w:"Wing C"},{n:"Overflow",w:"Event overflow"}];
+var N=12,mode="normal",sel=null,over={},flags={};
+var zEl=document.getElementById("zones");
+function base(z,i){
+  var h=(z*53+i*37+11)%100,k=z*N+i;
+  if(z===3) return mode==="surge"?(h<12?"full":"free"):"closed";
+  if(mode==="surge") return k%7===0?"res":(h<88?"full":"free");
+  return h<48?"full":"free";
+}
+function st(z,i){var k=z+"-"+i+mode;return over[k]||base(z,i)}
+function lbl(z,i){return ZONES[z].n[0]+(i+1)}
+function render(){
+  zEl.innerHTML="";var c={free:0,full:0,res:0},best=null;
+  ZONES.forEach(function(Z,z){
+    var d=document.createElement("div");d.className="zone";
+    var f=0,b="";
+    for(var i=0;i<N;i++){
+      var s=st(z,i);if(s==="free")f++;if(c[s]!==undefined)c[s]++;
+      var key=z+"-"+i;
+      b+='<button class="bay'+(flags[key+mode]?" flag":"")+'" data-s="'+s+'" data-z="'+z+'" data-i="'+i+'" aria-pressed="'+(sel===key)+'" aria-label="Bay '+lbl(z,i)+', '+({free:"free",full:"full",res:"reserved",closed:"closed"})[s]+'">'+(s==="closed"?"":(i+1))+'</button>';
+    }
+    d.innerHTML='<h3>'+Z.n+'<small>'+(z===3&&mode==="normal"?"closed":f+" FREE")+'</small></h3><div class="bays">'+b+'</div>';
+    zEl.appendChild(d);
+    if(z<3||mode==="surge"){if(!best||f>best.f)best={n:Z.n,f:f}}
+  });
+  document.getElementById("c-free").textContent=c.free;
+  document.getElementById("c-full").textContent=c.full;
+  document.getElementById("c-res").textContent=c.res;
+  document.getElementById("rec").innerHTML=mode==="surge"
+   ?'Gate marshal: send the next vehicles to '+best.n+'.<small>'+best.f+' bays free. Overflow was opened early because the main lots filled.</small>'
+   :'Next stop: '+best.n+'.<small>'+best.f+' bays free right now. Drivers know before they commit to a route.</small>';
+  panel();
+}
+function panel(){
+  var p=document.getElementById("panel");
+  if(!sel){p.innerHTML='<b>No bay selected</b><p style="margin:4px 0 0;color:var(--mu)">Tap a bay on the map.</p>';return}
+  var a=sel.split("-"),z=+a[0],i=+a[1],s=st(z,i);
+  var txt={free:"Free",full:"Full",res:"Reserved for guests",closed:"Closed"}[s];
+  var h='<b>Bay '+lbl(z,i)+': '+txt+'</b><p style="margin:4px 0 0;color:var(--mu)">'+ZONES[z].w+' (sample). Wing Commander name and number appear here.</p><div class="acts">';
+  if(s==="free")h+='<button id="b-res">Reserve for guests</button>';
+  if(s==="res")h+='<button id="b-un">Release reservation</button>';
+  if(s!=="closed")h+='<button id="b-rep">'+(flags[sel+mode]?"Report sent. Undo":"Report wrong status")+'</button>';
+  p.innerHTML=h+'</div>';
+  var k=sel+mode;
+  var q=function(id,fn){var e=document.getElementById(id);if(e)e.onclick=fn};
+  q("b-res",function(){over[k]="res";render()});
+  q("b-un",function(){over[k]="free";render()});
+  q("b-rep",function(){flags[k]=!flags[k];render()});
+}
+zEl.addEventListener("click",function(e){
+  var t=e.target.closest(".bay");if(!t)return;
+  if(t.dataset.s==="closed"){sel=null}else sel=t.dataset.z+"-"+t.dataset.i;
+  render();
+});
+function setMode(m){
+  mode=m;sel=null;
+  document.getElementById("m-normal").setAttribute("aria-pressed",m==="normal");
+  document.getElementById("m-surge").setAttribute("aria-pressed",m==="surge");
+  render();
+}
+document.getElementById("m-normal").onclick=function(){setMode("normal")};
+document.getElementById("m-surge").onclick=function(){setMode("surge")};
+render();
+})();
+</script>
+</body>
+</html>
