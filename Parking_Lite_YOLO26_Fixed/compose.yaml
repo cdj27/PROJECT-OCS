@@ -1,0 +1,37 @@
+services:
+  api:
+    build: .
+    restart: unless-stopped
+    environment:
+      PARKING_API_KEY: ${PARKING_API_KEY:?Set a random API key in .env}
+      PARKING_ALLOWED_ORIGINS: ${PARKING_ALLOWED_ORIGINS:-}
+      PARKING_CPU_THREADS: "1"
+    volumes:
+      - ${PARKING_MODELS_DIR:-./models}:/app/models:ro
+    mem_limit: 5g
+    cpus: 1
+    healthcheck:
+      test: ["CMD","python","-c","import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/readyz')"]
+      interval: 30s
+      timeout: 5s
+      start_period: 90s
+      retries: 3
+  https:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?Set the API hostname in .env}
+      ACME_EMAIL: ${ACME_EMAIL:?Set the certificate contact email in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+volumes:
+  caddy_data:
+  caddy_config:

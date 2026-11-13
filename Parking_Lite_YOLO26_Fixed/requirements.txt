@@ -9,3 +9,4 @@ uvicorn>=0.25
 python-multipart>=0.0.9
 requests>=2.31,<3
 torchvision>=0.13
+psutil>=5.9

@@ -1,0 +1,13 @@
+{
+    email {$ACME_EMAIL}
+}
+{$API_DOMAIN} {
+    request_body {
+        max_size 13MB
+    }
+    reverse_proxy api:8080 {
+        transport http {
+            response_header_timeout 300s
+        }
+    }
+}

@@ -1,0 +1,9 @@
+**
+!Dockerfile
+!requirements-hosted.txt
+!hosted_api.py
+!parking_lite/
+!parking_lite/*.py
+!deploy/
+!deploy/verify_models.py
+!deploy/entrypoint.sh

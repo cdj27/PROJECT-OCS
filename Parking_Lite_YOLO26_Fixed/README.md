@@ -1,4 +1,6 @@
-# Parking Analysis v2.2
+# Parking Analysis v2.3
+
+For hosting and external apps, see [HOSTING.md](HOSTING.md). The separate hosted entry point exposes authenticated `POST /v1/analyze`; the desktop app keeps its local two-step API. Docker configuration and a private model packager are included; no public deployment is implied by uploading the code to GitHub.
 
 Double-click **START_PARKING.cmd** in the outer folder, or **START_APP.cmd** inside this project. The launcher opens the current app and chooses a free local port if an older server is still running. Check for the **Local app · v2** badge.
 
@@ -8,6 +10,17 @@ Alternatively, run from this folder:
 python start_app.py
 ```
 
+
+
+## Motorcycle and mixed-vehicle bay coverage (v2.3)
+
+A vehicle-containing bay can be missed even when the vehicle detector sees the motorcycle. Automatic analysis now recovers missing bays from painted divider proposals or bounded gaps between compatible existing bays. Recovery requires an unassigned detected vehicle inside the proposal, little overlap with existing bays, and visible paint along both long sides. A vehicle box alone never creates a bay. Saved manual layouts and explicit corner-only analysis retain their boundaries.
+
+RT-DETR and YOLO11m now provide complementary vehicle evidence in sparse scenes too. Recognized occupancy categories include motorcycles, bicycles, cars, buses and trucks. Existing COCO weights do not have a dedicated van class: vans may be labelled car or truck, while lorries use truck. The parser additionally accepts compatible custom-model labels such as van, motorbike, lorry, pickup and scooter; aliases do not train new visual categories. People are excluded. Duplicated nested vehicle boxes are suppressed before bay assignment. Two motorcycles in the same bay still count as one occupied bay, and a large vehicle genuinely spanning two bays can mark both occupied.
+
+The evidence table shows the detected vehicle categories and identifies recovered painted bays. Final occupancy stays binary: occupied or available. The recovery logic is inference code, not newly trained detector weights. The supplied motorcycle screenshot was reproduced as a 260-pixel-wide source-photo crop: the old pipeline returned two occupied car bays, and the new recovery adds the occupied motorcycle bay. Source images and detailed regression reports stay local under `outputs/vehicle-coverage/`.
+
+This example is not an accuracy certificate for all motorcycles, vans or lorries. Tiny/occluded vehicles, indistinct paint and missing neighbouring bay anchors can still prevent automatic recovery. The existing PKLot benchmark primarily covers cars; independent labelled mixed-vehicle scenes are required to measure motorcycle/van/lorry accuracy. No 99.99999% accuracy claim is made.
 
 ## Current binary output and multi-dataset training
 

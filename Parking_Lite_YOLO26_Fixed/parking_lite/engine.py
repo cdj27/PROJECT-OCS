@@ -1,11 +1,13 @@
 """Single analysis pipeline shared by browser, CLI and video."""
 import threading
+import os
 import time
 from copy import deepcopy
 from pathlib import Path
 import cv2
 import numpy as np
-from .core import detect_diagnostic,analyze_image,_polygon_px
+from .core import detect_diagnostic,analyze_image,_polygon_px,deduplicate_vehicles
+from .recovery import recover_vehicle_bays
 from .lines import discover_spaces
 from .slots import discover_parking,match_occupancy,box_iou
 from .corners import discover_corner_spaces,fuse_corner_boundaries
@@ -31,7 +33,7 @@ class ParkingEngine:
                                   'installed':(self.root/'models'/'yolo11m.pt').exists()},
                 'occupancy':{'name':self.occupancy_checkpoint.name,'path':str(self.occupancy_checkpoint),
                              'installed':self.occupancy_checkpoint.exists()},
-                'vehicle_backend':self.vehicle_backend,'runtime':'CPU','version':'2.2',
+                'vehicle_backend':self.vehicle_backend,'runtime':'CPU','version':'2.3',
                 'neighbour_overlap_confirmation':self.verify_boundary_overlap,
                 'decision_policy':'binary' if self.binary_output else 'abstaining'}
 
@@ -63,7 +65,7 @@ class ParkingEngine:
             key=str(path)
             if key not in self.models:
                 import torch
-                torch.set_num_threads(4)
+                torch.set_num_threads(max(1,min(8,int(os.environ.get('PARKING_CPU_THREADS','4')))))
                 if kind=='occupancy':
                     from .occupancy import BayOccupancy
                     self.models[key]=BayOccupancy(path)
@@ -201,11 +203,19 @@ class ParkingEngine:
                 tiled=(quality=='accurate' or max(h,w)>1800))
             vehicles=diagnostic['vehicles']
             supplemental=False
-            if len(parking_layout['spaces'])>=20 and self.model_info()['small_vehicles']['installed']:
+            dense=len(parking_layout['spaces'])>=20
+            if self.model_info().get('small_vehicles',{}).get('installed',False):
                 extra=detect_diagnostic(self.load('small_vehicles'),image,conf=.25,imgsz=960,retry=False)['vehicles']
                 for vehicle in extra:
+                    if not dense and vehicle['label']=='car' and vehicle['confidence']<.35:continue
                     if not any(box_iou(vehicle['box'],old['box'])>.45 for old in vehicles):vehicles.append(vehicle)
                 supplemental=True
+            vehicles=deduplicate_vehicles(vehicles)
+            recovered=[]
+            if layout is None and engine=='auto':
+                assignments=self.vehicle_evidence(vehicles,parking_layout['spaces'],w,h)
+                parking_layout,recovered=recover_vehicle_bays(image,parking_layout,vehicles,assignments)
+                for sid in recovered:occupancy[sid]=parking_layout['occupancy_predictions'][sid]
             verified=0;corner_crop_checks=0;classifier_checks=0
             preliminary=self.vehicle_evidence(vehicles,parking_layout['spaces'],w,h)
             if self.model_info()['occupancy']['installed']:
@@ -257,6 +267,7 @@ class ParkingEngine:
                 space['boundary_source']=original.get('boundary_source',parking_layout.get('source','manual'))
                 hits=assignments[space['id']];space['vehicle_indices']=hits
                 space['vehicle_detected']=bool(hits)
+                space['vehicle_types']=sorted({vehicles[i]['label'] for i in hits})
                 if hits:space.update(status='occupied',source='vehicle_detector')
                 if space['status']=='available':
                     polygon=np.asarray(space['polygon'],np.float32)
@@ -319,6 +330,7 @@ class ParkingEngine:
                 'vehicle_attempts':diagnostic['attempts'],'parking':learned.get('diagnostics',{}),
                 'verified_empty_candidates':verified,'vehicle_count':len(vehicles),
                 'supplemental_small_vehicle_detector':supplemental,
+                'recovered_vehicle_bays':recovered,
                 'corner_crop_checks':corner_crop_checks,
                 'corner_classifier_checks':classifier_checks,
                 'confirmed_neighbour_overlaps':overlap_confirmations,

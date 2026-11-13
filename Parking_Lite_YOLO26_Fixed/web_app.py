@@ -25,7 +25,7 @@ SLOT_MODEL=ROOT/'models'/'parking_slots.pt'
 if not SLOT_MODEL.exists():SLOT_MODEL=ROOT/'models'/'parking_slots.evaluation.pt'
 OUTPUT=ROOT/'outputs'
 OUTPUT.mkdir(exist_ok=True)
-app=FastAPI(title='Parking Analysis',version='2.2')
+app=FastAPI(title='Parking Analysis',version='2.3')
 _model_lock=threading.Lock()
 _batch_lock=threading.Lock()
 batch=BatchStore(ROOT/'datasets'/'preparation')
@@ -45,7 +45,7 @@ def discover_for_image(im,engine='auto',quality='balanced'):
 
 @app.get('/api/status')
 def status():
-    return {'version':'2.2','build':APP_BUILD,'models':pipeline.model_info(),'image':images.current(),
+    return {'version':'2.3','build':APP_BUILD,'models':pipeline.model_info(),'image':images.current(),
             'samples':[{'id':hashlib.sha256(p.name.encode()).hexdigest()[:16],'name':p.name}
                        for p in sorted(SAMPLES.glob('*')) if p.suffix.lower() in ('.jpg','.jpeg','.png','.webp')]}
 

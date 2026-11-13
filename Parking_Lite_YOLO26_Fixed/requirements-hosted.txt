@@ -1,0 +1,8 @@
+ultralytics==8.4.208
+opencv-python>=4.8,<5
+numpy>=1.24,<3
+pillow>=9
+fastapi>=0.110,<1
+uvicorn>=0.25,<1
+python-multipart>=0.0.9
+requests>=2.31,<3

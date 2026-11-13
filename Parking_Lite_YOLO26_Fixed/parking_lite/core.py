@@ -9,7 +9,25 @@ import json
 import cv2
 import numpy as np
 
-VEHICLE_CLASSES = {'car', 'motorcycle', 'truck', 'bus'}
+VEHICLE_CLASSES = {'car','motorcycle','truck','bus','bicycle','van','pickup','scooter','minibus','trailer'}
+VEHICLE_ALIASES={'motorbike':'motorcycle','motor cycle':'motorcycle','lorry':'truck','pickup truck':'pickup',
+                 'pick-up':'pickup','coach':'bus','suv':'car','taxi':'car','bicycles':'bicycle'}
+
+
+def deduplicate_vehicles(vehicles):
+    unique=[]
+    for vehicle in sorted(vehicles,key=lambda v:-v['confidence']):
+        a=np.array(vehicle['box'],float);area_a=np.prod(np.maximum(0,a[2:]-a[:2]))
+        duplicate=False
+        for kept in unique:
+            b=np.array(kept['box'],float);area_b=np.prod(np.maximum(0,b[2:]-b[:2]))
+            intersection=np.prod(np.maximum(0,np.minimum(a[2:],b[2:])-np.maximum(a[:2],b[:2])))
+            iou=intersection/max(1,area_a+area_b-intersection)
+            same=vehicle['label']==kept['label']
+            if (same and (iou>=.5 or intersection/max(1,min(area_a,area_b))>=.8)) or iou>=.85:
+                duplicate=True;break
+        if not duplicate:unique.append(vehicle)
+    return unique
 
 def load_detector(path, device='cpu'):
     from ultralytics import YOLO
@@ -23,6 +41,8 @@ def _parse_predictions(result, only_vehicles=True):
     for b in (result.boxes or []):
         cls=int(b.cls.item())
         label=result.names[cls]
+        if only_vehicles:
+            label=label.strip().lower();label=VEHICLE_ALIASES.get(label,label)
         if only_vehicles and label not in VEHICLE_CLASSES:
             continue
         ans.append({'label':label,'confidence':round(float(b.conf.item()),4),
@@ -74,6 +94,7 @@ def detect_diagnostic(model,image,device='cpu',conf=.25,imgsz=640,
                     duplicate=True;break
             if not duplicate:unique.append(v)
         vehicles=unique
+    vehicles=deduplicate_vehicles(vehicles)
     return {'vehicles':vehicles,'raw_detections':final_raw,'attempts':attempts,
             'inference_seconds':round(time.perf_counter()-t0,4),
             'warning':('No vehicle detected. This is not proof that mapped spaces are empty. '
