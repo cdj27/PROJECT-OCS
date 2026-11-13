@@ -1,0 +1,1 @@
+Download the official yolo26n.pt from Ultralytics. See README.md. This ZIP does not include weights.

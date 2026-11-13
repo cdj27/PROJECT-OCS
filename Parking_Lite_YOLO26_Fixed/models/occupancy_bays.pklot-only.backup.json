@@ -1,0 +1,35 @@
+{
+  "architecture": "MobileNetV3-Small frozen ImageNet features + trained linear head",
+  "source_images": 100,
+  "training_photo_count": 70,
+  "validation_photo_count": 15,
+  "test_photo_count": 15,
+  "available_threshold": 0.95,
+  "occupied_threshold": 0.9,
+  "validation": {
+    "bays": 516,
+    "available_truth": 192,
+    "occupied_truth": 324,
+    "correct_available": 191,
+    "correct_occupied": 319,
+    "false_available": 0,
+    "false_occupied": 1,
+    "unknown": 5,
+    "top1_accuracy": 0.9922480583190918
+  },
+  "test": {
+    "bays": 1500,
+    "available_truth": 810,
+    "occupied_truth": 690,
+    "correct_available": 788,
+    "correct_occupied": 689,
+    "false_available": 0,
+    "false_occupied": 8,
+    "unknown": 15,
+    "top1_accuracy": 0.9919999837875366
+  },
+  "note": "PKLot camera/day holdout. These are per-bay crop scores, not corner-boundary accuracy or proof of accuracy on arbitrary new lots.",
+  "approved_for_corner_use": true,
+  "activated_for": "Four observed corner brackets, plus corroboration of existing empty predictions with limited vehicle-box overlap; see outputs/application-validation/overlap-upgrade.json.",
+  "sha256": "a2f97a841f7e7744ea16952183058f0429342e9a1e3bea3f684664d7c0f3bc09"
+}

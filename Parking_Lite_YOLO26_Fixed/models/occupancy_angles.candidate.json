@@ -1,0 +1,173 @@
+{
+  "training_crops": 29730,
+  "augmented_training_crops": 7428,
+  "best_epoch": 0,
+  "baseline_sha256": "44a2781c7d407c05d28849319703722d3c6c7d8166e9407e0c7b6d76dbcdb8f5",
+  "baseline": {
+    "val": {
+      "bays": 516,
+      "accuracy": 0.9961240291595459,
+      "occupied_recall": 0.9938271641731262,
+      "available_recall": 1.0,
+      "false_available": 2,
+      "false_occupied": 0
+    },
+    "test": {
+      "bays": 1500,
+      "accuracy": 0.9946666955947876,
+      "occupied_recall": 1.0,
+      "available_recall": 0.990123450756073,
+      "false_available": 0,
+      "false_occupied": 8
+    },
+    "val_boxes": {
+      "bays": 516,
+      "accuracy": 0.9961240291595459,
+      "occupied_recall": 1.0,
+      "available_recall": 0.9895833134651184,
+      "false_available": 0,
+      "false_occupied": 2
+    },
+    "test_boxes": {
+      "bays": 1500,
+      "accuracy": 0.9933333396911621,
+      "occupied_recall": 1.0,
+      "available_recall": 0.9876543283462524,
+      "false_available": 0,
+      "false_occupied": 10
+    },
+    "cnr_val": {
+      "bays": 1275,
+      "accuracy": 0.9960784316062927,
+      "occupied_recall": 1.0,
+      "available_recall": 0.9931880235671997,
+      "false_available": 0,
+      "false_occupied": 5
+    },
+    "cnr_test": {
+      "bays": 6413,
+      "accuracy": 0.8867924809455872,
+      "occupied_recall": 0.8776406645774841,
+      "available_recall": 0.9136029481887817,
+      "false_available": 585,
+      "false_occupied": 141
+    },
+    "ext_val": {
+      "bays": 1840,
+      "accuracy": 0.9929347634315491,
+      "occupied_recall": 0.9937888383865356,
+      "available_recall": 0.991584837436676,
+      "false_available": 7,
+      "false_occupied": 6
+    },
+    "ext_test": {
+      "bays": 3000,
+      "accuracy": 0.9810000061988831,
+      "occupied_recall": 0.9749340415000916,
+      "available_recall": 0.9871967434883118,
+      "false_available": 38,
+      "false_occupied": 19
+    },
+    "angle_val": {
+      "bays": 1316,
+      "accuracy": 0.8510638475418091,
+      "occupied_recall": 0.9852150678634644,
+      "available_recall": 0.6765734553337097,
+      "false_available": 11,
+      "false_occupied": 185
+    },
+    "angle_test": {
+      "bays": 3500,
+      "accuracy": 0.8217142820358276,
+      "occupied_recall": 0.9439588785171509,
+      "available_recall": 0.6688103079795837,
+      "false_available": 109,
+      "false_occupied": 515
+    }
+  },
+  "candidate": {
+    "val": {
+      "bays": 516,
+      "accuracy": 0.9961240291595459,
+      "occupied_recall": 0.9938271641731262,
+      "available_recall": 1.0,
+      "false_available": 2,
+      "false_occupied": 0
+    },
+    "test": {
+      "bays": 1500,
+      "accuracy": 0.9946666955947876,
+      "occupied_recall": 1.0,
+      "available_recall": 0.990123450756073,
+      "false_available": 0,
+      "false_occupied": 8
+    },
+    "val_boxes": {
+      "bays": 516,
+      "accuracy": 0.9961240291595459,
+      "occupied_recall": 1.0,
+      "available_recall": 0.9895833134651184,
+      "false_available": 0,
+      "false_occupied": 2
+    },
+    "test_boxes": {
+      "bays": 1500,
+      "accuracy": 0.9933333396911621,
+      "occupied_recall": 1.0,
+      "available_recall": 0.9876543283462524,
+      "false_available": 0,
+      "false_occupied": 10
+    },
+    "cnr_val": {
+      "bays": 1275,
+      "accuracy": 0.9960784316062927,
+      "occupied_recall": 1.0,
+      "available_recall": 0.9931880235671997,
+      "false_available": 0,
+      "false_occupied": 5
+    },
+    "cnr_test": {
+      "bays": 6413,
+      "accuracy": 0.8867924809455872,
+      "occupied_recall": 0.8776406645774841,
+      "available_recall": 0.9136029481887817,
+      "false_available": 585,
+      "false_occupied": 141
+    },
+    "ext_val": {
+      "bays": 1840,
+      "accuracy": 0.9929347634315491,
+      "occupied_recall": 0.9937888383865356,
+      "available_recall": 0.991584837436676,
+      "false_available": 7,
+      "false_occupied": 6
+    },
+    "ext_test": {
+      "bays": 3000,
+      "accuracy": 0.9810000061988831,
+      "occupied_recall": 0.9749340415000916,
+      "available_recall": 0.9871967434883118,
+      "false_available": 38,
+      "false_occupied": 19
+    },
+    "angle_val": {
+      "bays": 1316,
+      "accuracy": 0.8510638475418091,
+      "occupied_recall": 0.9852150678634644,
+      "available_recall": 0.6765734553337097,
+      "false_available": 11,
+      "false_occupied": 185
+    },
+    "angle_test": {
+      "bays": 3500,
+      "accuracy": 0.8217142820358276,
+      "occupied_recall": 0.9439588785171509,
+      "available_recall": 0.6688103079795837,
+      "false_available": 109,
+      "false_occupied": 515
+    }
+  },
+  "approved_for_activation": false,
+  "validation_loss": 0.11620084643363952,
+  "note": "Synthetic rotation/perspective stress on held-out source crops; not proof of finding diagonal bay boundaries. Original camera/day splits preserved; test never selects an epoch."
+}

@@ -1,0 +1,8 @@
+{
+  "source": "https://huggingface.co/simahanyan/parking-lot-yolo26m",
+  "weights_url": "https://huggingface.co/simahanyan/parking-lot-yolo26m/resolve/main/weights/parking_lot.pt",
+  "sha256": "9b9c9185ce49cb71610341649ee49dd5ab4422bd9d5db0e818f61614835d4cae",
+  "bytes": 44028761,
+  "usage": "Evaluation and feedback; contact owner before commercial redistribution or deployment.",
+  "fine_tuned_on_local_photos": false
+}

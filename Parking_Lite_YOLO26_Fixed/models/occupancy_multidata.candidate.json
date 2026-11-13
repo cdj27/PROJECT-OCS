@@ -1,0 +1,124 @@
+{
+  "datasets": [
+    "PKLot",
+    "CNRPark"
+  ],
+  "selected_head": "linear",
+  "validation_macro_loss": 0.015127296559512615,
+  "selected_using": "Validation macro cross-entropy only; test never selects an epoch or head.",
+  "training_crops": 14302,
+  "counts": {
+    "train": 14302,
+    "val": 516,
+    "test": 1500,
+    "val_boxes": 516,
+    "test_boxes": 1500,
+    "cnr_val": 1275,
+    "cnr_test": 6413
+  },
+  "baseline": {
+    "val": {
+      "bays": 516,
+      "accuracy": 0.9922480583190918,
+      "occupied_recall": 0.9907407164573669,
+      "available_recall": 0.9947916865348816,
+      "false_available": 3,
+      "false_occupied": 1
+    },
+    "test": {
+      "bays": 1500,
+      "accuracy": 0.9919999837875366,
+      "occupied_recall": 1.0,
+      "available_recall": 0.9851852059364319,
+      "false_available": 0,
+      "false_occupied": 12
+    },
+    "val_boxes": {
+      "bays": 516,
+      "accuracy": 0.9922480583190918,
+      "occupied_recall": 0.9969135522842407,
+      "available_recall": 0.984375,
+      "false_available": 1,
+      "false_occupied": 3
+    },
+    "test_boxes": {
+      "bays": 1500,
+      "accuracy": 0.9753333330154419,
+      "occupied_recall": 1.0,
+      "available_recall": 0.9543209671974182,
+      "false_available": 0,
+      "false_occupied": 37
+    },
+    "cnr_val": {
+      "bays": 1275,
+      "accuracy": 0.9074509739875793,
+      "occupied_recall": 0.9833641648292542,
+      "available_recall": 0.8514986634254456,
+      "false_available": 9,
+      "false_occupied": 109
+    },
+    "cnr_test": {
+      "bays": 6413,
+      "accuracy": 0.811008870601654,
+      "occupied_recall": 0.8163564205169678,
+      "available_recall": 0.7953431606292725,
+      "false_available": 878,
+      "false_occupied": 334
+    }
+  },
+  "candidate": {
+    "val": {
+      "bays": 516,
+      "accuracy": 0.9961240291595459,
+      "occupied_recall": 0.9969135522842407,
+      "available_recall": 0.9947916865348816,
+      "false_available": 1,
+      "false_occupied": 1
+    },
+    "test": {
+      "bays": 1500,
+      "accuracy": 0.9973333477973938,
+      "occupied_recall": 1.0,
+      "available_recall": 0.9950617551803589,
+      "false_available": 0,
+      "false_occupied": 4
+    },
+    "val_boxes": {
+      "bays": 516,
+      "accuracy": 0.9961240291595459,
+      "occupied_recall": 0.9969135522842407,
+      "available_recall": 0.9947916865348816,
+      "false_available": 1,
+      "false_occupied": 1
+    },
+    "test_boxes": {
+      "bays": 1500,
+      "accuracy": 0.9919999837875366,
+      "occupied_recall": 1.0,
+      "available_recall": 0.9851852059364319,
+      "false_available": 0,
+      "false_occupied": 12
+    },
+    "cnr_val": {
+      "bays": 1275,
+      "accuracy": 0.9929412007331848,
+      "occupied_recall": 1.0,
+      "available_recall": 0.9877384305000305,
+      "false_available": 0,
+      "false_occupied": 9
+    },
+    "cnr_test": {
+      "bays": 6413,
+      "accuracy": 0.8435989618301392,
+      "occupied_recall": 0.8289060592651367,
+      "available_recall": 0.8866421580314636,
+      "false_available": 818,
+      "false_occupied": 185
+    }
+  },
+  "approved_for_activation": true,
+  "achieved_99_on_every_test_view": false,
+  "source": "https://github.com/fabiocarrara/deep-parking/releases/download/archive/CNRPark-Patches-150x150.zip",
+  "archive_sha256": "2dc9b13892595e599e1f5025ddcce08ef7287babbb978670580c60abd86c5fdb",
+  "limitation": "CNRPark crops test occupancy only. They do not test automatic bay discovery. Camera B is held out, but both cameras observe the same parking site."
+}

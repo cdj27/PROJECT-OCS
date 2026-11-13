@@ -1,0 +1,21 @@
+{
+  "parent": "parking_slots.evaluation.pt",
+  "dataset": "PKLot / Voxel51 mirror",
+  "dataset_provenance": "datasets/public_pklot_100/provenance.json",
+  "sha256": "29a8e2e8aed288e73d8ea4517565af08ee81b728b3a357b12542d77ccf952a1f",
+  "training": {
+    "full_photos": 100,
+    "train": 70,
+    "val": 15,
+    "test": 15,
+    "annotated_bays": 4444,
+    "epochs": 5,
+    "imgsz": 512,
+    "frozen_layers": 23,
+    "optimizer": "AdamW",
+    "lr0": 0.0001
+  },
+  "activated": false,
+  "report": "outputs/public-finetune/comparison.json",
+  "usage": "Derived from an evaluation checkpoint; original model licensing restrictions remain applicable."
+}

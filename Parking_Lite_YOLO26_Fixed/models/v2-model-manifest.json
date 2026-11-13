@@ -1,0 +1,19 @@
+{
+  "vehicle_primary": "rtdetr-l.pt",
+  "parking_primary": "parking_slots.evaluation.pt",
+  "vehicle_dense_supplement": "yolo11m.pt",
+  "models": {
+    "rtdetr-l.pt": {
+      "sha256": "6de60b10d4bc566f00cda0f5b4d64afe4b66d48dc9695d2171effb7859d8e73f",
+      "bytes": 66511432
+    },
+    "yolo11m.pt": {
+      "sha256": "d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95",
+      "bytes": 40684120
+    },
+    "parking_slots.evaluation.pt": {
+      "sha256": "9b9c9185ce49cb71610341649ee49dd5ab4422bd9d5db0e818f61614835d4cae",
+      "bytes": 44028761
+    }
+  }
+}

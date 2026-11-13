@@ -1,0 +1,1 @@
+Copy any authorised parking lot photo to this folder and name it parking-test.jpg, or update IMAGE_NAME in the notebook.
