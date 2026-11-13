@@ -1,10 +1,11 @@
-"""White-painted divider proposals. No learned weights or network required.
+"""Contrasting painted-divider proposals, independent of marking hue.
 
 Proposals require two visible, near-parallel dividers with compatible endpoints.
 They are estimates, not an exhaustive inventory of spaces hidden by vehicles.
 """
 import cv2
 import numpy as np
+from .markings import paint_response
 
 
 def discover_spaces(image):
@@ -12,14 +13,9 @@ def discover_spaces(image):
     scale = min(1., 1400 / max(h, w))
     small = cv2.resize(image, None, fx=scale, fy=scale)
     sh, sw = small.shape[:2]
-    hsv = cv2.cvtColor(small, cv2.COLOR_BGR2HSV)
-    # Relative local brightness retains paint on grey asphalt while rejecting
-    # uniformly bright pavement. Low saturation excludes yellow markings.
-    value = hsv[:, :, 2]
-    background = cv2.GaussianBlur(value, (0, 0), max(5, min(sh, sw)*.025))
-    contrast = value.astype(float) - background.astype(float)
-    paint=(hsv[:,:,1]<65) | ((hsv[:,:,0]>=15)&(hsv[:,:,0]<=40)&(hsv[:,:,1]>80))
-    mask = (paint & (value > 110) & (contrast > 4)).astype('uint8')*255
+    value=paint_response(small)
+    paint=value>8
+    mask=paint.astype(np.uint8)*255
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
     edges = cv2.Canny(cv2.cvtColor(small, cv2.COLOR_BGR2GRAY), 15, 45)
     raw = cv2.HoughLinesP(cv2.bitwise_or(mask, edges), 1, np.pi/360, threshold=20,
@@ -37,14 +33,14 @@ def discover_spaces(image):
         direction /= length
         normal = np.array([-direction[1], direction[0]])
         samples = a[None,:] + np.linspace(.05,.95,40)[:,None]*(b-a)
-        def brightness(offset,white=False):
+        def brightness(offset,paint_only=False):
             xy = np.rint(samples + normal*offset).astype(int)
             xy[:,0] = np.clip(xy[:,0],0,sw-1); xy[:,1] = np.clip(xy[:,1],0,sh-1)
             values=value[xy[:,1],xy[:,0]].astype(float)
-            if white:values=np.where(paint[xy[:,1],xy[:,0]],values,0)
+            if paint_only:values=np.where(paint[xy[:,1],xy[:,0]],values,0)
             return values
         centre = np.maximum.reduce([brightness(t,True) for t in (-4,0,4)])
-        stripe = (centre>110) & (centre-brightness(-12)>6) & (centre-brightness(12)>6)
+        stripe = (centre>12) & (centre-brightness(-12)>6) & (centre-brightness(12)>6)
         if np.mean(stripe) < .35: continue
         if direction[1] < 0 or (abs(direction[1]) < .001 and direction[0] < 0):
             direction = -direction
@@ -121,4 +117,4 @@ def discover_spaces(image):
     return {'version':1, 'source':'white_lines', 'review_required':True, 'spaces':spaces,
             'diagnostics':{'line_segments':len(segments), 'merged_dividers':len(groups),
                 'proposed_spaces':len(spaces)},
-            'note':'Painted-line proposals: check boundaries and add missed spaces. White and yellow markings are supported; hidden or distorted markings may be missed.'}
+            'note':'Painted-line proposals: colour and local contrast provide evidence, while repeated bay geometry validates it. Hidden or distorted markings may be missed.'}

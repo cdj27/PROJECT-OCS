@@ -1,4 +1,4 @@
-# Parking Analysis v2.3
+# Parking Analysis v2.4
 
 For hosting and external apps, see [HOSTING.md](HOSTING.md). The separate hosted entry point exposes authenticated `POST /v1/analyze`; the desktop app keeps its local two-step API. Docker configuration and a private model packager are included; no public deployment is implied by uploading the code to GitHub.
 
@@ -11,6 +11,25 @@ python start_app.py
 ```
 
 
+
+
+## Marking-colour robustness (v2.4)
+
+Yellow continuous lines already had limited support. The line, corner, orientation and missed-bay recovery components now share a **local light/chromatic contrast signal** instead of separate white/yellow hue checks. Controlled tests cover white, yellow, blue, red, green, faded neutral paint, dim markings, and dark paint on light pavement. The legacy `white_lines` engine name remains accepted for API compatibility; it now means generic painted-line geometry.
+
+Colour is evidence, not a parking-space definition. Existing repeated-divider checks, proportions, four inward-facing L corners and vehicle evidence remain required. Corner candidates must have compatible colour/polarity. Bright and dark strokes are processed separately so contrast halos do not merge into false solid brackets. Automatic fusion rejects a large corner proposal containing the centres of two confident known bays. Uniform coloured surfaces produce no bays in the controlled tests. This does not establish universal accuracy on textured real pavement, missing/occluded markings or unmarked spaces.
+
+A 100-epoch **occupancy-head** experiment used 29,730 crops: the existing 22,302 training examples plus 7,428 controlled marking-colour variants from PKLot, CNRPark and CNR-EXT. The original camera/day splits were retained. Variants alter narrow paint-like structures and lighting while preserving occupancy labels. This is synthetic augmentation, not a new manually labelled mixed-colour dataset, and it does not retrain the full-frame bay detector.
+
+No checkpoint passed the validation no-regression gate, so **the deployed weights were retained**. The rejected candidate and metrics are `models/occupancy_markings.candidate.pt` (local) and `models/occupancy_markings.candidate.json`. Reproduce a candidate with:
+
+```powershell
+python tools/train_angle_occupancy.py --augmentation marking --epochs 100 --output models/occupancy_markings.candidate.pt
+```
+
+The controlled colour tests are in `tests/test_markings.py`; real-photo, motorcycle and full application checks are stored locally under `outputs/marking-upgrade/`. Restart using `START_PARKING.cmd` to load this backend version. These changes do not restart the public API or its tunnel.
+
+For broader deployment, the next useful data is reviewed full-frame bay polygons/keypoints across different countries, surfaces, marking styles, lighting and vehicle types. Occupancy crops alone cannot teach precise bay boundaries. Keep locations/cameras/capture sessions separate in evaluation and measure both missed/extra bays and false-available errors. If no usable boundary evidence exists, a reviewed layout is still needed rather than inventing spaces from paint colour or vehicle boxes.
 
 ## Motorcycle and mixed-vehicle bay coverage (v2.3)
 
@@ -60,7 +79,7 @@ The supplied-photo selector is a quick test with the images already in this fold
 
 ## Four L-shaped corner brackets (no connecting lines)
 
-Automatic mode now also detects bays defined by **four separated inward-facing white L-shaped brackets**. It fits the observed corners into a quadrilateral, checks arm directions and bay proportions, and rejects combinations that span across intermediate markings. Matching learned rectangles are refined to the observed corner boundary; a broad model box cannot merge two fully marked bays.
+Automatic mode now also detects bays defined by **four separated inward-facing L-shaped paint brackets**. It fits the observed corners into a quadrilateral, checks arm directions and bay proportions, and rejects combinations that span across intermediate markings. Matching learned rectangles are refined to the observed corner boundary; a broad model box cannot merge two fully marked bays.
 
 To isolate this detector, open **Advanced analysis & model details → Bay boundaries → Four L-shaped corners only**, then analyse. The evidence table tags these as **four-corner boundary**. The selector includes `corner-brackets-demo.png`, a controlled synthetic test with three empty marked bays; it is not a real photograph or a real-world accuracy benchmark.
 

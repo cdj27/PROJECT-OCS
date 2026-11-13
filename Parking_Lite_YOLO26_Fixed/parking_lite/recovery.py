@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 from .core import _polygon_px
 from .lines import discover_spaces
+from .markings import paint_response
 
 
 def ordered_quad(points):
@@ -44,8 +45,7 @@ def gap_proposals(layout,width,height,verified_anchors=None):
 def paint_support(image,polygon):
     points=ordered_quad(polygon)
     if points is None:return 0.
-    hsv=cv2.cvtColor(image,cv2.COLOR_BGR2HSV);value=hsv[:,:,2]
-    white=(hsv[:,:,1]<65)|((hsv[:,:,0]>=15)&(hsv[:,:,0]<=40)&(hsv[:,:,1]>80))
+    value=paint_response(image);marking=value>8
     h,w=value.shape;bay_width=np.linalg.norm(points[1]-points[0])
     radius=max(2,min(32,int(bay_width*.16)))
     scores=[]
@@ -59,9 +59,9 @@ def paint_support(image,polygon):
             def read(delta):
                 xy=np.rint(samples+(offset+delta)*normal).astype(int)
                 xy[:,0]=np.clip(xy[:,0],0,w-1);xy[:,1]=np.clip(xy[:,1],0,h-1)
-                return value[xy[:,1],xy[:,0]].astype(float),white[xy[:,1],xy[:,0]]
+                return value[xy[:,1],xy[:,0]].astype(float),marking[xy[:,1],xy[:,0]]
             centre,paint=read(0);left,_=read(max(3,radius));right,_=read(-max(3,radius))
-            best=max(best,float(np.mean(paint&(centre>120)&(centre-left>5)&(centre-right>5))))
+            best=max(best,float(np.mean(paint&(centre>12)&(centre-left>5)&(centre-right>5))))
         scores.append(best)
     return min(scores)
 

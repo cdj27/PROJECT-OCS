@@ -1,6 +1,7 @@
 """Estimate painted-divider tilt and restore aligned detections as polygons."""
 import cv2
 import numpy as np
+from .markings import paint_response
 
 
 def rotate_canvas(image,angle):
@@ -13,8 +14,7 @@ def rotate_canvas(image,angle):
 
 def divider_tilt(image):
     scale=min(1.,1000/max(image.shape[:2]));small=cv2.resize(image,None,fx=scale,fy=scale)
-    hsv=cv2.cvtColor(small,cv2.COLOR_BGR2HSV);value=hsv[:,:,2]
-    paint=((hsv[:,:,1]<65)|((hsv[:,:,0]>=15)&(hsv[:,:,0]<=40)&(hsv[:,:,1]>80)))&(value>125)
+    value=paint_response(small);paint=value>8
     lines=cv2.createLineSegmentDetector().detect(cv2.cvtColor(small,cv2.COLOR_BGR2GRAY))[0]
     histogram=np.zeros(90);accepted=0
     if lines is None:return dict(angle=0.,support=0.,segments=0)
@@ -30,7 +30,7 @@ def divider_tilt(image):
             pixels=value[points[:,1],points[:,0]].astype(float)
             return np.where(paint[points[:,1],points[:,0]],pixels,0) if white else pixels
         centre=np.maximum.reduce([sample(k,True) for k in (-2,0,2)])
-        fraction=np.mean((centre>125)&(centre-sample(-7)>7)&(centre-sample(7)>7))
+        fraction=np.mean((centre>12)&(centre-sample(-7)>7)&(centre-sample(7)>7))
         if fraction<.45:continue
         angle=(np.degrees(np.arctan2(u[1],u[0]))+45)%90-45
         histogram[int(np.rint(angle))%90]+=min(length,100)*fraction

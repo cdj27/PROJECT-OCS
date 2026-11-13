@@ -14,7 +14,7 @@ ROOT=Path(__file__).resolve().parent
 def build_id():
     source=b''.join((ROOT/name).read_bytes() for name in
         ('start_app.py','web_app.py','parking_lite/engine.py','parking_lite/core.py',
-         'parking_lite/slots.py','parking_lite/lines.py','parking_lite/corners.py','parking_lite/orientation.py','parking_lite/recovery.py','parking_lite/occupancy.py','parking_lite/session.py','web/index.html','web/app.js'))
+         'parking_lite/slots.py','parking_lite/lines.py','parking_lite/corners.py','parking_lite/markings.py','parking_lite/orientation.py','parking_lite/recovery.py','parking_lite/occupancy.py','parking_lite/session.py','web/index.html','web/app.js'))
     weights=[]
     for name in ('rtdetr-l.pt','yolo11m.pt','parking_slots.evaluation.pt','parking_slots.pt','occupancy_bays.pt'):
         path=ROOT/'models'/name

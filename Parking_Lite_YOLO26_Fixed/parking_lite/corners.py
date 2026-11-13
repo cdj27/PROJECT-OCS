@@ -5,15 +5,24 @@ All four brackets must be visible; unobserved corners are never invented.
 """
 import cv2
 import numpy as np
+from .markings import paint_response
 
 
 def _markers(image):
     h,w=image.shape[:2]
-    hsv=cv2.cvtColor(image,cv2.COLOR_BGR2HSV);value=hsv[:,:,2]
-    background=cv2.GaussianBlur(value,(0,0),max(4,min(h,w)*.018))
-    mask=((hsv[:,:,1]<75)&(value>105)&(value.astype(float)-background.astype(float)>9)).astype(np.uint8)
-    mask=cv2.morphologyEx(mask,cv2.MORPH_CLOSE,np.ones((3,3),np.uint8))
-    count,labels,stats,_=cv2.connectedComponentsWithStats(mask,8)
+    response,negative=paint_response(image,split_polarity=True)
+    # Keep dark strokes separate from their bright local-contrast halo. Joining
+    # opposite polarities can turn an L into a filled blob on light pavement.
+    parts=[]
+    for polarity in (negative,~negative):
+        mask=((response>12)&polarity).astype(np.uint8)
+        mask=cv2.morphologyEx(mask,cv2.MORPH_CLOSE,np.ones((3,3),np.uint8))
+        mask&=polarity.astype(np.uint8)
+        parts.append(cv2.connectedComponentsWithStats(mask,8))
+    first,labels,stats,_=parts[0];second,other,other_stats,_=parts[1]
+    labels=np.where(other>0,other+first-1,labels)
+    stats=np.concatenate([stats,other_stats[1:]])
+    count=first+second-1
     markers=[]
     for label in range(1,count):
         x,y,bw,bh,area=stats[label]
@@ -22,6 +31,7 @@ def _markers(image):
         pixels=np.column_stack((xx+x,yy+y)).astype(np.float32)
         component=(labels[y:y+bh,x:x+bw]==label).astype(np.uint8)
         contours,_=cv2.findContours(component,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+        if not contours:continue
         outline=cv2.approxPolyDP(max(contours,key=cv2.contourArea),1.2,True)[:,0].astype(float)
         contour_edges=np.roll(outline,-1,axis=0)-outline
         angles={round(float(np.arctan2(edge[1],edge[0])%(np.pi/2)),2)
@@ -50,7 +60,12 @@ def _markers(image):
                 if fit<.86 or min(arm_a,arm_b)<.10:continue
                 elbow=p+(axis_a+axis_b)*thickness*.5
                 fits.append({'point':elbow,'arms':(axis_a,axis_b),'length':(len_a+len_b)/2,'fit':fit})
-        if fits:markers.append(max(fits,key=lambda marker:marker['fit']))
+        if fits:
+            best=max(fits,key=lambda marker:marker['fit'])
+            colour=np.median(image[yy+y,xx+x],axis=0).astype(np.uint8)
+            best['chroma']=cv2.cvtColor(colour[None,None],cv2.COLOR_BGR2LAB)[0,0,1:].astype(float)
+            best['negative']=bool(np.mean(negative[yy+y,xx+x])>.5)
+            markers.append(best)
     # Bound combinatorial work on texture-heavy photographs.
     return sorted(markers,key=lambda marker:-marker['fit'])[:240]
 
@@ -90,6 +105,9 @@ def discover_corner_spaces(image):
                     tolerance=max(7,min(length_a,length_b)*.18)
                     for m,marker in enumerate(markers):
                         if m in (i,j,k) or np.linalg.norm(marker['point']-predicted)>tolerance:continue
+                        chosen=[markers[index] for index in (i,j,k,m)]
+                        if len({entry['negative'] for entry in chosen})!=1:continue
+                        if any(np.linalg.norm(entry['chroma']-chosen[0]['chroma'])>30 for entry in chosen[1:]):continue
                         s=marker['point']
                         quad=np.array([p,q,s,r],np.float32)
                         if not cv2.isContourConvex(quad):continue
@@ -132,7 +150,7 @@ def discover_corner_spaces(image):
     return {'version':1,'source':'corner_brackets','review_required':True,'spaces':spaces,
             'occupancy_predictions':{},
             'diagnostics':{'corner_markers':len(markers),'four_corner_bays':len(spaces)},
-            'note':'Bays proposed from four visible inward-facing L-shaped white brackets. Hidden or incomplete corners may be missed; corner geometry alone does not establish occupancy.'}
+            'note':'Bays proposed from four visible inward-facing L-shaped paint brackets. Marking colour does not establish occupancy; hidden or incomplete corners may be missed.'}
 
 
 def fuse_corner_boundaries(learned,corners,width,height):
@@ -140,9 +158,18 @@ def fuse_corner_boundaries(learned,corners,width,height):
     from copy import deepcopy
     result=deepcopy(learned)
     source_spaces=learned.get('spaces',[])
-    used=set();refined=[]
+    used=set();refined=[];rejected=0
     for corner in corners['spaces']:
         quad=np.array(corner['points'],np.float32)
+        contained=0
+        for space in source_spaces:
+            polygon=np.array(space['points'],np.float32)
+            area=abs(cv2.contourArea(polygon));centre=tuple(map(float,polygon.mean(0)))
+            confidence=learned.get('occupancy_predictions',{}).get(space['id'],{}).get('confidence',0)
+            if area>0 and confidence>=.5 and cv2.pointPolygonTest(quad,centre,False)>0:
+                contained+=1
+        if contained>=2:
+            rejected+=1;continue
         candidates=[]
         for index,space in enumerate(source_spaces):
             if index in used:continue
@@ -173,4 +200,5 @@ def fuse_corner_boundaries(learned,corners,width,height):
     result['occupancy_predictions']=new_predictions
     result.setdefault('diagnostics',{})['corner_brackets']=corners['diagnostics']
     result['diagnostics']['proposed_spaces']=len(result['spaces'])
+    result['diagnostics']['rejected_multi_bay_corners']=rejected
     return result

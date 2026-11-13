@@ -1,4 +1,4 @@
-"""Train occupancy with label-preserving rotation/perspective augmentation."""
+"""Train occupancy with controlled angle or marking-colour augmentation."""
 import argparse
 from copy import deepcopy
 import hashlib
@@ -15,6 +15,7 @@ sys.path.insert(0,str(ROOT))
 from parking_lite.occupancy import BayOccupancy,rectify_bay,image_tensor
 from tools.import_public_parking import iter_samples
 from tools.train_multidataset import make_head,metrics
+from tools.augment_markings import marking_variant
 
 
 def angle_variant(crop,key,training=False):
@@ -35,12 +36,17 @@ def angle_variant(crop,key,training=False):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--epochs',type=int,default=100)
-    p.add_argument('--output',type=Path,default=ROOT/'models/occupancy_angles.candidate.pt')
+    p.add_argument('--augmentation',choices=['angle','marking'],default='angle')
+    p.add_argument('--output',type=Path)
     a=p.parse_args();torch.set_num_threads(4);torch.manual_seed(42)
+    if a.output is None:
+        name='angles' if a.augmentation=='angle' else 'markings'
+        a.output=ROOT/'models'/f'occupancy_{name}.candidate.pt'
     active=ROOT/'models/occupancy_bays.pt'
     checkpoint=torch.load(active,weights_only=True)
     model=BayOccupancy(active)
-    folder=ROOT/'datasets/cnrpark';cache=folder/'angle_features_v1.pt'
+    prefix=a.augmentation
+    folder=ROOT/'datasets/cnrpark';cache=folder/(prefix+'_features_v1.pt')
     base=torch.load(folder/'multidata_features.pt',weights_only=True)
     ext=torch.load(folder/'extended_features.pt',weights_only=True)
     features=base['features'];labels=base['labels']
@@ -54,8 +60,8 @@ def main():
             with torch.inference_mode():af[k].append(model.encoder(image_tensor(buffers[k])).mean((2,3)).clone())
             buffers[k].clear()
         def add(k,image,label,name):
-            image,angle=angle_variant(image,name,k=='train');buffers[k].append(image);al[k].append(label)
-            records.append(dict(split=k,label=label,source=name,angle=angle))
+            image,variant=(angle_variant if prefix=='angle' else marking_variant)(image,name,k=='train');buffers[k].append(image);al[k].append(label)
+            records.append(dict(split=k,label=label,source=name,variant=variant))
             if len(buffers[k])>=32:flush(k)
         data=ROOT/'datasets/public_pklot_100'
         selected={r['index']:(s,r) for s,rows in json.loads((data/'splits.json').read_text()).items() for r in rows}
@@ -66,7 +72,7 @@ def main():
             for i,space in enumerate(sample['parking_spaces']['polylines']):
                 crop=rectify_bay(image,np.array(space['points'][0],np.float32)*[w,h])
                 add(split,crop,int(space['occupancy_status']=='occupied'),f'pklot/{index}/{i}')
-            print(f'Angle features: {row["image"]}',flush=True)
+            print(f'{prefix} features: {row["image"]}',flush=True)
         for archive,manifest,limits in [
             ('CNRPark-Patches-150x150.zip','split-manifest.json',{'train':2000,'cnr_val':400,'cnr_test':1000}),
             ('CNR-EXT-Patches-150x150.zip','extended-split-manifest.json',{'train':3000,'ext_val':400,'ext_test':1000})]:
@@ -79,23 +85,23 @@ def main():
                         name=('PATCHES/' if archive.startswith('CNR-EXT') else '')+r['image']
                         im=cv2.imdecode(np.frombuffer(z.read(name),np.uint8),cv2.IMREAD_COLOR)
                         add(k,im,r['label'],archive+'/'+r['image'])
-                    print(f'Angle features {archive}: {source_key} {len(chosen)}',flush=True)
+                    print(f'{prefix} features {archive}: {source_key} {len(chosen)}',flush=True)
         for k in buffers:flush(k);af[k]=torch.cat(af[k]);al[k]=torch.tensor(al[k])
         aug=dict(features=af,labels=al,records=records)
         torch.save(aug,cache)
-        (folder/'angle-manifest.json').write_text(json.dumps(records,indent=2))
-    for k in ('train','val','test'):features['angle_'+k]=aug['features'][k];labels['angle_'+k]=aug['labels'][k]
+        (folder/(prefix+'-manifest.json')).write_text(json.dumps(records,indent=2))
+    for k in ('train','val','test'):features[prefix+'_'+k]=aug['features'][k];labels[prefix+'_'+k]=aug['labels'][k]
     mean=checkpoint['mean'];std=checkpoint['std'];x={k:((f-mean)/std).clone() for k,f in features.items()}
     head=make_head(checkpoint.get('head_kind','linear'))
     head.load_state_dict(checkpoint['head']);head.eval()
-    keys=[k for k in x if k not in ('train','angle_train')]
-    validation=['val','val_boxes','cnr_val','ext_val','angle_val']
+    keys=[k for k in x if k not in ('train',prefix+'_train')]
+    validation=['val','val_boxes','cnr_val','ext_val',prefix+'_val']
     with torch.inference_mode():baseline={k:metrics(head(x[k]).softmax(1),labels[k]) for k in keys}
     loss=torch.nn.CrossEntropyLoss()
     def val_loss():
         with torch.inference_mode():return sum(float(loss(head(x[k]),labels[k])) for k in validation)/len(validation)
     best_loss=val_loss();best=deepcopy(head.state_dict());best_epoch=0
-    train_x=torch.cat([x['train'],x['angle_train']]);train_y=torch.cat([labels['train'],labels['angle_train']])
+    train_x=torch.cat([x['train'],x[prefix+'_train']]);train_y=torch.cat([labels['train'],labels[prefix+'_train']])
     optimizer=torch.optim.AdamW(head.parameters(),lr=.0001,weight_decay=.01)
     for epoch in range(a.epochs):
         head.train()
@@ -106,14 +112,14 @@ def main():
         eligible=all(scores[k]['accuracy']>=baseline[k]['accuracy'] and scores[k]['false_available']<=baseline[k]['false_available'] for k in validation)
         value=val_loss()
         if eligible and value<best_loss:best_loss=value;best=deepcopy(head.state_dict());best_epoch=epoch+1
-        if (epoch+1)%20==0:print(f'Angle training {epoch+1}/{a.epochs}; validation loss {value:.5f}; selected epoch {best_epoch}',flush=True)
+        if (epoch+1)%20==0:print(f'{prefix} training {epoch+1}/{a.epochs}; validation loss {value:.5f}; selected epoch {best_epoch}',flush=True)
     head.load_state_dict(best);head.eval()
     with torch.inference_mode():candidate={k:metrics(head(x[k]).softmax(1),labels[k]) for k in keys}
     approved=best_epoch>0 and all(candidate[k]['accuracy']>=baseline[k]['accuracy'] and candidate[k]['false_available']<=baseline[k]['false_available'] for k in keys)
-    report=dict(training_crops=len(train_y),augmented_training_crops=len(labels['angle_train']),best_epoch=best_epoch,
+    report=dict(augmentation=prefix,training_crops=len(train_y),augmented_training_crops=len(labels[prefix+'_train']),best_epoch=best_epoch,
         baseline_sha256=hashlib.sha256(active.read_bytes()).hexdigest(),baseline=baseline,candidate=candidate,
         approved_for_activation=approved,validation_loss=best_loss,
-        note='Synthetic rotation/perspective stress on held-out source crops; not proof of finding diagonal bay boundaries. Original camera/day splits preserved; test never selects an epoch.')
+        note='Synthetic '+prefix+' stress on held-out source crops; not proof of universal bay-boundary accuracy. Original camera/day splits preserved; test never selects an epoch.')
     checkpoint.update(head=head.state_dict(),report=report)
     if checkpoint.get('head_kind')=='linear':checkpoint.update(weight=head.weight.detach(),bias=head.bias.detach())
     torch.save(checkpoint,a.output);a.output.with_suffix('.json').write_text(json.dumps(report,indent=2))

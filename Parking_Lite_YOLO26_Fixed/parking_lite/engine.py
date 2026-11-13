@@ -33,7 +33,7 @@ class ParkingEngine:
                                   'installed':(self.root/'models'/'yolo11m.pt').exists()},
                 'occupancy':{'name':self.occupancy_checkpoint.name,'path':str(self.occupancy_checkpoint),
                              'installed':self.occupancy_checkpoint.exists()},
-                'vehicle_backend':self.vehicle_backend,'runtime':'CPU','version':'2.3',
+                'vehicle_backend':self.vehicle_backend,'runtime':'CPU','version':'2.4',
                 'neighbour_overlap_confirmation':self.verify_boundary_overlap,
                 'decision_policy':'binary' if self.binary_output else 'abstaining'}
 
