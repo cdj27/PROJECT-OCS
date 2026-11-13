@@ -83,9 +83,11 @@ def managed_alive(record,kind):
 
 def status():
     state=json.loads(STATE.read_text()) if STATE.exists() else {}
-    return dict(url=state.get('url'),local_url=state.get('local_url'),
-        api_running=managed_alive(state.get('api'),'api'),
-        tunnel_running=managed_alive(state.get('tunnel'),'tunnel'),
+    api_running=managed_alive(state.get('api'),'api')
+    tunnel_running=managed_alive(state.get('tunnel'),'tunnel')
+    return dict(url=state.get('url') if api_running and tunnel_running else None,local_url=state.get('local_url'),
+        api_running=api_running,
+        tunnel_running=tunnel_running,
         frontend_origins=state.get('origins',[]),key_file=str(ROOT/'.env'),logs=str(LOGS))
 
 
@@ -112,8 +114,11 @@ def spawn(command,logfile,env):
 
 def start(origins,warmup):
     existing=status()
-    if existing['api_running'] or existing['tunnel_running']:
+    if existing['api_running'] and existing['tunnel_running']:
         print(json.dumps(existing,indent=2));return
+    if existing['api_running'] or existing['tunnel_running']:
+        print('Recovering an incomplete API/tunnel pair',flush=True)
+        stop()
     executable=install_tunnel();LOGS.mkdir(parents=True,exist_ok=True)
     settings=load_env(ROOT/'.env')
     if not settings.get('PARKING_API_KEY'):settings['PARKING_API_KEY']=secrets.token_urlsafe(48)
